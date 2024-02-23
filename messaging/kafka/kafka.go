@@ -3,15 +3,17 @@ package kafka
 import (
 	"fmt"
 
+	"github.com/arrrden/kafka/messaging/kafka/logger"
 	kafka "github.com/segmentio/kafka-go"
 )
 
 type KafkaClient struct {
 	Host   string
 	Topics map[string]int
+	logger *logger.Logger
 }
 
-func NewKafkaClient(host string) (*KafkaClient, error) {
+func NewKafkaClient(host string, logger *logger.Logger) (*KafkaClient, error) {
 	// dial the client to ensure it's valid
 	conn, err := Dial(host)
 	if err != nil {
@@ -21,11 +23,9 @@ func NewKafkaClient(host string) (*KafkaClient, error) {
 	conn.Close()
 
 	client := &KafkaClient{
-		Host: host,
+		Host:   host,
+		logger: logger,
 	}
-	// if err := client.getTopics(conn); err != nil {
-	// 	return nil, err
-	// }
 
 	return client, nil
 }
@@ -38,19 +38,21 @@ func (c *KafkaClient) NewConnection() (*Connection, error) {
 		return nil, err
 	}
 
-	conn.conn = kconn
+	conn.Conn = kconn
 	conn.Client = c
 	conn.Retries = 5
 	return conn, nil
 }
 
-func (c *KafkaClient) getTopics(conn *kafka.Conn) error {
+func (c *KafkaClient) GetTopics(conn *kafka.Conn) error {
 	defer conn.Close()
 
 	partitions, err := conn.ReadPartitions()
 	if err != nil {
 		return fmt.Errorf("failed to read partitions: %w", err)
 	}
+
+	c.Topics = map[string]int{}
 
 	for _, p := range partitions {
 		c.Topics[p.Topic] = p.ID

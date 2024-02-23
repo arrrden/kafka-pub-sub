@@ -13,11 +13,11 @@ import (
 type Connection struct {
 	Client  *KafkaClient
 	Retries int
-	conn    *kafka.Conn
+	Conn    *kafka.Conn
 }
 
 func (c *Connection) Close() error {
-	return c.conn.Close()
+	return c.Conn.Close()
 }
 
 func (c *Connection) Produce(ctx context.Context, topic string, messages ...kafka.Message) error {
@@ -46,11 +46,11 @@ func (c *Connection) Produce(ctx context.Context, topic string, messages ...kafk
 	return nil
 }
 
-func (c *Connection) Consume(ctx context.Context, topic, groupId string, messageCh chan<- kafka.Message, quit <-chan struct{}) error {
+func (c *Connection) Consume(ctx context.Context, topics []string, groupId string, messageCh chan<- kafka.Message, quit <-chan struct{}) error {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:        []string{c.Client.Host},
 		GroupID:        groupId,
-		Topic:          topic,
+		GroupTopics:    topics,
 		MaxBytes:       10e6, // 10MB
 		CommitInterval: 5 * time.Second,
 	})
@@ -61,7 +61,6 @@ loop:
 		case <-quit:
 			break loop
 		default:
-			fmt.Println("[*] reading message")
 			msg, err := reader.ReadMessage(ctx)
 			if err != nil {
 				err = fmt.Errorf("failed to read message: %w", err)
@@ -77,8 +76,7 @@ loop:
 	return nil
 }
 
-func (c *Connection) Subscribe(ctx context.Context, topic, groupId string, messageCh chan<- kafka.Message, errCh chan<- error, subscribed *bool) {
-	fmt.Println("[*] subscribing")
+func (c *Connection) Subscribe(ctx context.Context, topics []string, groupId string, messageCh chan<- kafka.Message, errCh chan<- error, subscribed *bool) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
@@ -94,13 +92,11 @@ func (c *Connection) Subscribe(ctx context.Context, topic, groupId string, messa
 	}()
 
 	go func() {
-		errCh <- c.Consume(ctx, topic, groupId, messageCh, quit)
+		errCh <- c.Consume(ctx, topics, groupId, messageCh, quit)
 	}()
 
-	fmt.Println("[*] subscribed")
 	wg.Wait()
 	close(quit)
 
-	fmt.Println("[*] unsubscribed")
 	close(errCh)
 }
