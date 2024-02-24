@@ -127,7 +127,7 @@ func (r *RouterImpl) Listen() error {
 	subscribed := true
 
 	go func() {
-		conn.Subscribe(r.ctx, r.RqTopics(), r.groupId, msgCh, errCh, &subscribed)
+		conn.Subscribe(r.RqTopics(), r.groupId, msgCh, errCh, &subscribed)
 	}()
 
 	go func() {
@@ -142,7 +142,7 @@ func (r *RouterImpl) Listen() error {
 				r.callHandler(&msg)
 			case errs := <-errCh:
 				if errs != nil {
-					err = conn.Produce(r.ctx, r.errTopic, kafka.Message{
+					err = conn.Produce(r.errTopic, kafka.Message{
 						Partition: int(gkafka.PatternTypeAny),
 						Key:       []byte("error"),
 						Value:     []byte(err.Error()),
@@ -240,7 +240,7 @@ func (r *RouterImpl) writeErr(msgName string, msgKey []byte, errTopic string, er
 		if err != nil {
 			return fmt.Errorf("failed to marshal error: %w", err)
 		}
-		err = conn.Produce(r.ctx, errTopic, kafka.Message{
+		err = conn.Produce(errTopic, kafka.Message{
 			Partition: int(gkafka.PatternTypeAny),
 			Topic:     errTopic,
 			Key:       msgKey,

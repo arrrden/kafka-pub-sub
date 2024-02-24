@@ -1,19 +1,22 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/arrrden/kafka/messaging/kafka/logger"
+	"github.com/rs/zerolog"
 	kafka "github.com/segmentio/kafka-go"
 )
 
 type KafkaClient struct {
+	ctx    context.Context
 	Host   string
 	Topics map[string]int
-	logger *logger.Logger
+	logger zerolog.Logger
+	log    func(*zerolog.Event)
 }
 
-func NewKafkaClient(host string, logger *logger.Logger) (*KafkaClient, error) {
+func NewKafkaClient(ctx context.Context, host string, logger *zerolog.Logger) (*KafkaClient, error) {
 	// dial the client to ensure it's valid
 	conn, err := Dial(host)
 	if err != nil {
@@ -23,8 +26,14 @@ func NewKafkaClient(host string, logger *logger.Logger) (*KafkaClient, error) {
 	conn.Close()
 
 	client := &KafkaClient{
+		ctx:    ctx,
 		Host:   host,
-		logger: logger,
+		logger: *logger,
+	}
+	client.log = func(e *zerolog.Event) {
+		if logger != nil {
+			e.Send()
+		}
 	}
 
 	return client, nil

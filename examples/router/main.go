@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
+
+	"github.com/rs/zerolog"
 
 	"github.com/arrrden/kafka/examples/router/handlers/listings"
 	"github.com/arrrden/kafka/messaging/kafka"
@@ -13,7 +16,11 @@ import (
 
 func main() {
 	ctx := context.Background()
-	k, err := kafka.NewKafkaClient("localhost:9094", nil)
+	logger := zerolog.New(os.Stdout)
+
+	// Attach the Logger to the context.Context
+	ctx = logger.WithContext(ctx)
+	k, err := kafka.NewKafkaClient(ctx, "localhost:9094", &logger)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,7 +36,7 @@ func main() {
 		count := 0
 		for {
 			msg, _ := kafka.NewMessage("beans", "new-listing", listings.NewListingReq{Name: fmt.Sprintf("listing=%d", count)})
-			conn.Produce(ctx, "listing-recommendation-requests", msg)
+			conn.Produce("listing-recommendation-requests", msg)
 
 			count += 1
 			time.Sleep(5 * time.Second)

@@ -12,7 +12,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	k, err := kafka.NewKafkaClient("localhost:9094", nil)
+	k, err := kafka.NewKafkaClient(ctx, "localhost:9094", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func main() {
 	go func() {
 		count := 0
 		for {
-			conn.Produce(ctx, "listing-recommendation-requests", gkafka.Message{
+			conn.Produce("listing-recommendation-requests", gkafka.Message{
 				Key:   []byte("beans"),
 				Value: []byte(fmt.Sprintf("boobies %d", count)),
 			})
@@ -49,7 +49,7 @@ func main() {
 	}()
 
 	go func() {
-		conn.Subscribe(ctx, []string{"listing-recommendation-requests"}, "boobies", messageCh, errorCh, &subscribed)
+		conn.Subscribe([]string{"listing-recommendation-requests"}, "boobies", messageCh, errorCh, &subscribed)
 	}()
 
 	go func() {
